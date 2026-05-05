@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Living Textbook</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf_viewer.min.css"/>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --bg:#ffffff;--bg2:#f7f5f2;--bg3:#eeece8;
+    --text:#1a1a1a;--text2:#666;--text3:#999;
+    --border:#e0ddd8;
+    --chip-bg:#f0ede8;--chip-text:#555;
+    --accent:#D85A30;--accent-light:#FAECE7;--accent-text:#993C1D;
+    --ai-bubble:#f0ede8;--ai-text:#1a1a1a;
+    --page-bg:#fff;
+    --weak-bg:#FEF2F2;--weak-text:#991B1B;--weak-border:#FECACA;
+    --prog-bg:#EAF3DE;--prog-text:#3B6D11;--prog-border:#97C459;
+  }
+  body.dark{
+    --bg:#1a1917;--bg2:#232220;--bg3:#2c2b28;
+    --text:#e8e4de;--text2:#9a9690;--text3:#555;
+    --border:#2e2d2a;
+    --chip-bg:#2c2b28;--chip-text:#a0ada8;
+    --accent:#E8693A;--accent-light:#3a1f12;--accent-text:#F0997B;
+    --ai-bubble:#2c2b28;--ai-text:#e8e4de;
+    --page-bg:#1f1e1c;
+    --weak-bg:#3a1212;--weak-text:#FCA5A5;--weak-border:#7f1d1d;
+    --prog-bg:#1a2e12;--prog-text:#86efac;--prog-border:#166534;
+  }
+
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;transition:background 0.2s,color 0.2s;}
+
+  /* SETUP SCREEN */
+  #setup{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:center;z-index:100;}
+  .setup-card{background:#fff;border-radius:14px;padding:32px;width:420px;box-shadow:0 8px 32px rgba(0,0,0,0.18);}
+  .setup-card h2{font-size:18px;font-weight:600;margin-bottom:6px;color:#1a1a1a;}
+  .setup-card p{font-size:13px;color:#666;margin-bottom:20px;line-height:1.5;}
+  .setup-card input{width:100%;height:40px;border:1px solid #ddd;border-radius:8px;padding:0 12px;font-size:13px;margin-bottom:10px;outline:none;}
+  .setup-card input:focus{border-color:#D85A30;}
+  .setup-card button{width:100%;height:40px;background:#D85A30;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;}
+  .setup-card button:hover{background:#993C1D;}
+  .setup-card .hint{font-size:12px;color:#999;margin-top:10px;text-align:center;}
+  .setup-card .hint a{color:#D85A30;text-decoration:none;}
+
+  /* HEADER */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:0 18px;height:50px;border-bottom:1px solid var(--border);background:var(--bg);flex-shrink:0;}
+  .logo{display:flex;align-items:center;gap:8px;}
+  .logo-icon{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;}
+  .logo-icon svg{width:14px;height:14px;fill:white;}
+  .logo-text{font-size:15px;font-weight:600;color:var(--text);}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .page-info{font-size:12px;color:var(--text2);}
+  .status-dot{width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;margin-right:4px;}
+  .status-text{font-size:12px;color:var(--text2);}
+  .theme-btn{width:34px;height:20px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;position:relative;}
+  .theme-knob{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--accent);transition:transform 0.2s;}
+  body.dark .theme-knob{transform:translateX(14px);}
+
+  /* PROGRESS */
+  .progress-bar{height:3px;background:var(--bg3);flex-shrink:0;}
+  .progress-fill{height:100%;background:var(--accent);width:0%;transition:width 0.4s;}
+
+  /* BODY */
+  .body{display:grid;grid-template-columns:1fr 1fr;flex:1;overflow:hidden;}
+
+  /* LEFT PANEL */
+  .left{display:flex;flex-direction:column;background:var(--page-bg);border-right:1px solid var(--border);overflow:hidden;}
+  .left-top{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;}
+  .page-nav{display:flex;align-items:center;gap:6px;}
+  .nav-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+  .nav-btn:hover{background:var(--bg3);}
+
+  /* UPLOAD ZONE */
+  #upload-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;padding:20px;}
+  #upload-zone svg{width:40px;height:40px;stroke:var(--accent);fill:none;stroke-width:1.5;opacity:0.7;}
+  #upload-zone p{font-size:13px;color:var(--text2);text-align:center;}
+  #upload-zone span{font-size:12px;color:var(--text3);}
+  #file-input{display:none;}
+
+  /* PAGE CONTENT */
+  #page-area{flex:1;overflow-y:auto;padding:0;position:relative;display:none;background:var(--bg3);}
+  #pdf-container{position:relative;width:calc(100% - 24px);margin:12px;border-radius:6px;box-shadow:0 2px 12px rgba(0,0,0,0.15);overflow:hidden;display:block;}
+  #pdf-canvas{width:100%;display:block;}
+  .textLayer{position:absolute;top:0;left:0;right:0;bottom:0;overflow:hidden;opacity:1;line-height:1;pointer-events:auto;transform:none;}
+  .textLayer span{color:transparent;position:absolute;white-space:pre;cursor:text;user-select:text;}
+  .textLayer ::selection{background:rgba(216,90,48,0.3);}
+  #popup{position:fixed;background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--accent-text);cursor:pointer;display:none;z-index:100;white-space:nowrap;box-shadow:0 2px 12px rgba(0,0,0,0.15);}
+  #popup:hover{background:var(--accent-light);}
+
+  /* RIGHT PANEL */
+  .right{display:flex;flex-direction:column;background:var(--bg);overflow:hidden;}
+  .right-top{padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+  .right-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.06em;}
+  .memory-pill{font-size:11px;padding:2px 9px;border-radius:20px;background:var(--accent-light);color:var(--accent-text);border:1px solid var(--accent);}
+
+  /* MESSAGES */
+  #messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+  .msg{display:flex;flex-direction:column;gap:3px;max-width:90%;}
+  .msg.ai{align-self:flex-start;}
+  .msg.user{align-self:flex-end;}
+  .msg-sender{font-size:11px;color:var(--text3);padding:0 4px;}
+  .msg.user .msg-sender{text-align:right;}
+  .bubble{padding:9px 13px;border-radius:12px;font-size:13px;line-height:1.6;}
+  .msg.ai .bubble{background:var(--ai-bubble);color:var(--ai-text);border-radius:3px 12px 12px 12px;}
+  .msg.user .bubble{background:var(--accent);color:white;border-radius:12px 12px 3px 12px;}
+
+  /* TYPING INDICATOR */
+  .typing{display:flex;align-items:center;gap:4px;padding:10px 13px;background:var(--ai-bubble);border-radius:3px 12px 12px 12px;width:fit-content;}
+  .typing span{width:6px;height:6px;border-radius:50%;background:var(--text3);animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:0.2s;}
+  .typing span:nth-child(3){animation-delay:0.4s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-6px);}}
+
+  /* SPECIAL CARDS */
+  .weak-card{background:var(--weak-bg);border:1px solid var(--weak-border);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--weak-text);line-height:1.8;align-self:flex-start;max-width:95%;}
+  .prog-card{background:var(--prog-bg);border:1px solid var(--prog-border);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--prog-text);line-height:1.8;align-self:flex-start;max-width:95%;}
+  .card-row{display:flex;align-items:flex-start;gap:7px;margin-bottom:4px;}
+  .card-row:last-child{margin-bottom:0;}
+
+  /* BOTTOM */
+  .bottom{flex-shrink:0;border-top:1px solid var(--border);padding:10px 14px 12px;}
+  .chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:9px;}
+  .chip{padding:5px 11px;border-radius:20px;border:1px solid var(--border);background:var(--chip-bg);color:var(--chip-text);font-size:12px;cursor:pointer;transition:all 0.15s;white-space:nowrap;user-select:none;}
+  .chip:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-light);}
+  .chip.danger{border-color:var(--weak-border);color:var(--weak-text);background:var(--weak-bg);}
+  .chip.success{border-color:var(--prog-border);color:var(--prog-text);background:var(--prog-bg);}
+  .chip.danger:hover,.chip.success:hover{opacity:0.8;}
+  .chip:disabled,.chip[disabled]{opacity:0.4;pointer-events:none;}
+
+  .input-row{display:flex;gap:8px;align-items:center;}
+  #input{flex:1;height:38px;border:1px solid var(--border);border-radius:10px;padding:0 13px;font-size:13px;background:var(--bg2);color:var(--text);font-family:inherit;outline:none;transition:border 0.15s;}
+  #input:focus{border-color:var(--accent);}
+  #input::placeholder{color:var(--text3);}
+  #input:disabled{opacity:0.5;}
+  .send-btn{width:38px;height:38px;border-radius:10px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity 0.15s;}
+  .send-btn:hover{opacity:0.85;}
+  .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .send-btn svg{width:14px;height:14px;fill:white;}
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- SETUP MODAL -->
+<div id="setup">
+  <div class="setup-card">
+    <h2>📖 Living Textbook</h2>
+    <p>Enter your Backboard API key to get started. Your AI tutor will remember everything you learn across all sessions.</p>
+    <input type="password" id="api-key-input" placeholder="sk-bb-..." />
+    <button onclick="startApp()">Start Learning</button>
+    <p class="hint">Get your free API key at <a href="https://app.backboard.io" target="_blank">app.backboard.io</a></p>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20V2H6.5A2.5 2.5 0 004 4.5v15z"/></svg></div>
+    <span class="logo-text">Living Textbook</span>
+  </div>
+  <div class="header-right">
+    <span id="conn-status"><span class="status-dot"></span><span class="status-text">Connected</span></span>
+    <span class="page-info" id="page-info">No PDF loaded</span>
+    <div class="theme-btn" onclick="toggleTheme()"><div class="theme-knob"></div></div>
+  </div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+
+<!-- BODY -->
+<div class="body">
+
+  <!-- LEFT: PDF READER -->
+  <div class="left">
+    <div class="left-top">
+      <span class="section-label" id="chapter-label">Upload a PDF to begin</span>
+      <div class="page-nav">
+        <div class="nav-btn" id="prev" onclick="changePage(-1)">&#8592;</div>
+        <div class="nav-btn" id="next" onclick="changePage(1)">&#8594;</div>
+      </div>
+    </div>
+
+    <!-- UPLOAD ZONE -->
+    <div id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="12" x2="12" y2="18"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+      <p>Click to upload your PDF textbook</p>
+      <span>Supports any PDF — textbooks, notes, articles</span>
+    </div>
+    <input type="file" id="file-input" accept=".pdf" onchange="loadPDF(this)"/>
+
+    <!-- PAGE CONTENT -->
+    <div id="page-area">
+      <div id="pdf-container">
+        <canvas id="pdf-canvas"></canvas>
+        <div id="text-layer" class="textLayer"></div>
+      </div>
+      <div id="popup">Ask AI about this &#8594;</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: AI CHAT -->
+  <div class="right">
+    <div class="right-top">
+      <span class="right-label">AI Tutor</span>
+      <span class="memory-pill">Remembers you</span>
+    </div>
+
+    <div id="messages">
+      <div class="msg ai">
+        <span class="msg-sender">Tutor</span>
+        <div class="bubble">Hi! Upload your PDF on the left to get started. I'll remember everything you learn — even when you come back tomorrow. 📚</div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="chips" id="chips">
+        <div class="chip" data-type="explain" onclick="chipClick(this)">Explain this page</div>
+        <div class="chip" data-type="summarize" onclick="chipClick(this)">Summarize</div>
+        <div class="chip" data-type="test" onclick="chipClick(this)">Test me</div>
+        <div class="chip danger" data-type="weak" onclick="chipClick(this)">My Weak Areas</div>
+        <div class="chip success" data-type="review" onclick="chipClick(this)">Review My Progress</div>
+      </div>
+      <div class="input-row">
+        <input id="input" placeholder="Ask anything about this page..." onkeydown="if(event.key==='Enter')sendMessage()" disabled/>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>
+          <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let API_KEY = '';
+let ASSISTANT_ID = localStorage.getItem('lt_assistant_id') || null;
+let THREAD_ID = localStorage.getItem('lt_thread_id') || null;
+const BASE = 'https://app.backboard.io/api';
+const SYSTEM_PROMPT = `You are an expert AI tutor inside a textbook reading app called "Living Textbook".
+
+CRITICAL RULE: Before every response, silently check your memory for what this student has struggled with, what they know well, and where they left off. Use this to personalize EVERY answer.
+
+BEHAVIOR:
+- Always explain using simple language and examples
+- When explaining a concept, check memory first — if student struggled with this before, acknowledge it: "You found this tricky last time, let's break it down differently..."
+- If student is strong on a topic from memory, affirm it: "You already understand X well, so this builds on that..."
+- When the student mentions "this page", use the page content provided in their message
+- For "My Weak Areas": pull from memory, list with 🔴 struggling, 🟡 needs revision, ✅ strong
+- For "Review My Progress": give full history from memory — pages read, topics asked, struggles and strengths
+- For "Test me": generate 3 quiz questions, make harder ones on weak areas from memory
+- ALWAYS store in memory: what topic was asked, whether student understood or struggled, which page they were on
+- Be warm, like a smart friend who has known the student for a long time`;
+
+let pdfPages = [], currentPage = 0, totalPages = 0, pdfName = '', isLoading = false;
+
+// ─── SETUP ───────────────────────────────────────────────────
+async function startApp() {
+  const key = document.getElementById('api-key-input').value.trim();
+  if (!key) return alert('Please enter your Backboard API key.');
+  API_KEY = key;
+  localStorage.setItem('lt_api_key', key);
+  try {
+    await initBackboard();
+    document.getElementById('setup').style.display = 'none';
+    enableInput();
+    // First time only — show simple welcome (no memory written)
+    addMsg('Welcome! Upload your PDF on the left to begin. I will remember everything you learn. 📚', 'ai');
+  } catch(e) {
+    alert('Could not connect to Backboard.\nError: ' + e.message);
+  }
+}
+
+// ─── BACKBOARD INIT ───────────────────────────────────────────
+async function initBackboard() {
+  // Step 1: Create assistant if not exists (memory is stored here)
+  if (!ASSISTANT_ID) {
+    const res = await bbFetch('POST', '/assistants', {
+      name: 'Living Textbook Tutor',
+      system_prompt: SYSTEM_PROMPT,
+      llm_provider: 'openai',
+      llm_model_name: 'gpt-4o-mini'
+    });
+    ASSISTANT_ID = res.assistant_id || res.id;
+    localStorage.setItem('lt_assistant_id', ASSISTANT_ID);
+  }
+
+  // Step 2: Create thread if not exists (conversation session)
+  if (!THREAD_ID) {
+    const res = await bbFetch('POST', '/threads', {
+      assistant_id: ASSISTANT_ID
+    });
+    THREAD_ID = res.thread_id || res.id;
+    localStorage.setItem('lt_thread_id', THREAD_ID);
+  }
+}
+
+// ─── BACKBOARD API ────────────────────────────────────────────
+async function bbFetch(method, path, body) {
+  const res = await fetch(BASE + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-API-Key': API_KEY },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(res.status + ': ' + t);
+  }
+  return res.json();
+}
+
+async function sendToBackboard(userMessage) {
+  // Send message to thread with memory=Auto so Backboard stores facts
+  const res = await bbFetch('POST', '/threads/' + THREAD_ID + '/messages', {
+    content: userMessage,
+    memory: 'Auto',
+    stream: false
+  });
+  return res.content || res.message || 'Could not generate a response.';
+}
+
+// ─── PDF LOADING ──────────────────────────────────────────────
+let pdfDoc = null;
+let renderTask = null;
+
+async function loadPDF(input) {
+  const file = input.files[0]; if (!file) return;
+  pdfName = file.name.replace('.pdf','');
+  addMsg('Loading "' + file.name + '"...', 'ai', false);
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      pdfDoc = await pdfjsLib.getDocument({ data: e.target.result }).promise;
+      totalPages = pdfDoc.numPages;
+      pdfPages = new Array(totalPages).fill(null); // lazy load text
+      currentPage = 0;
+      document.getElementById('upload-zone').style.display = 'none';
+      document.getElementById('page-area').style.display = 'block';
+      document.getElementById('chapter-label').textContent = pdfName;
+      await renderPage(currentPage);
+      updateInfo();
+      enableInput();
+      // Tell AI about the PDF but mark as no-memory (don't store this as a fact)
+      const greeting = await sendToBackboard(
+        'The student just uploaded a PDF called "' + pdfName + '" (' + totalPages + ' pages). ' +
+        'Check your memory for anything you remember about this student or this topic. ' +
+        'Greet them warmly , mention if you remember anything about their past struggles or progress. ' +
+        'If first time, just welcome them and ask for their name and save in memory.'
+      );
+      addMsg(greeting, 'ai');
+    } catch(err) { addMsg('Could not read that PDF. Error: ' + err.message, 'ai'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function renderPage(pageIndex) {
+  if (!pdfDoc) return;
+  const page = await pdfDoc.getPage(pageIndex + 1);
+  const canvas = document.getElementById('pdf-canvas');
+  const textLayerDiv = document.getElementById('text-layer');
+  const container = document.getElementById('page-area');
+
+  const scale = (container.clientWidth - 24) / page.getViewport({ scale: 1 }).width;
+  const viewport = page.getViewport({ scale: Math.max(scale, 1.5) });
+
+  // Set canvas size
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  // Set container height to match canvas
+  const pdfContainer = document.getElementById('pdf-container');
+  pdfContainer.style.height = viewport.height + 'px';
+
+  // Render PDF page to canvas
+  if (renderTask) renderTask.cancel();
+  renderTask = page.render({ canvasContext: canvas.getContext('2d'), viewport });
+  try { await renderTask.promise; } catch(e) {}
+
+  // Render selectable text layer on top
+  textLayerDiv.innerHTML = '';
+  textLayerDiv.style.position = 'absolute';
+  textLayerDiv.style.top = '0';
+  textLayerDiv.style.left = '0';
+  textLayerDiv.style.width = viewport.width + 'px';
+  textLayerDiv.style.height = viewport.height + 'px';
+  
+  const textContent = await page.getTextContent();
+
+  // Render text layer spans (selectable + invisible)
+  pdfjsLib.renderTextLayer({
+    textContentSource: textContent,
+    container: textLayerDiv,
+    viewport: viewport,
+    enhanceTextSelection: true,
+    textDivs: []
+  });
+
+  // Extract and store text for AI (sorted by position)
+  if (!pdfPages[pageIndex]) {
+    const items = textContent.items.filter(i => i.str.trim());
+    const lineMap = {};
+    for (const item of items) {
+      const y = Math.round(item.transform[5]);
+      if (!lineMap[y]) lineMap[y] = [];
+      lineMap[y].push(item);
+    }
+    const sortedYs = Object.keys(lineMap).map(Number).sort((a, b) => b - a);
+    const lines = sortedYs.map(y => {
+      const lineItems = lineMap[y].sort((a, b) => a.transform[4] - b.transform[4]);
+      return lineItems.map(i => i.str).join(' ');
+    });
+    pdfPages[pageIndex] = lines.join('\n').trim();
+  }
+}
+
+// ─── PAGE NAVIGATION ──────────────────────────────────────────
+function updateInfo() {
+  document.getElementById('page-info').textContent = 'Page ' + (currentPage+1) + ' / ' + totalPages;
+  document.getElementById('progress').style.width = ((currentPage+1)/totalPages*100) + '%';
+  document.getElementById('chapter-label').textContent = pdfName + ' — Page ' + (currentPage+1);
+  // Save progress so return greeting knows where student left off
+  localStorage.setItem('lt_last_pdf', pdfName);
+  localStorage.setItem('lt_last_page', currentPage + 1);
+}
+
+async function changePage(dir) {
+  if (!pdfDoc) return;
+  const n = currentPage + dir;
+  if (n < 0 || n >= totalPages) return;
+  currentPage = n;
+  await renderPage(currentPage);
+  updateInfo();
+  document.getElementById('page-area').scrollTop = 0;
+}
+
+// ─── CHAT ─────────────────────────────────────────────────────
+function enableInput() {
+  if (!API_KEY) return;
+  document.getElementById('input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('input');
+  const text = input.value.trim(); if (!text) return;
+  input.value = '';
+  addMsg(text, 'user');
+  const pageContent = pdfPages[currentPage] || '';
+  const prompt = pageContent
+    ? '[Page ' + (currentPage+1) + ' of "' + pdfName + '"]\nPage content: ' + pageContent.substring(0,800) + '\n\nQuestion: ' + text
+    : text;
+  await callAI(prompt);
+}
+
+async function chipClick(chip) {
+  if (isLoading) return;
+  const type = chip.dataset.type;
+  const pageContent = pdfPages[currentPage] || '';
+  const labels = { explain:'Explain this page', summarize:'Summarize', test:'Test me', weak:'My Weak Areas', review:'Review My Progress' };
+  const prompts = {
+    explain: 'Explain page ' + (currentPage+1) + ' of "' + pdfName + '" simply.\n\n' + pageContent,
+    summarize: 'Summarize page ' + (currentPage+1) + ' of "' + pdfName + '" in 3 bullet points.\n\n' + pageContent,
+    test: 'Give me 3 quiz questions for page ' + (currentPage+1) + ' of "' + pdfName + '".\n\n' + pageContent,
+    weak: 'Based on your memory of our sessions, what are my weak areas? Use 🔴 struggling, 🟡 needs revision, ✅ strong.',
+    review: 'Give me a full review of my learning progress from memory — topics studied, pages read, how I am doing.'
+  };
+  addMsg(labels[type], 'user');
+  await callAI(prompts[type]);
+}
+
+async function callAI(prompt) {
+  if (!API_KEY) { addMsg('Please enter your API key first.', 'ai'); return; }
+  isLoading = true;
+  document.getElementById('input').disabled = true;
+  document.getElementById('send-btn').disabled = true;
+  const typingEl = addTyping();
+  try {
+    const reply = await sendToBackboard(prompt);
+    typingEl.remove(); addMsg(reply, 'ai');
+  } catch(e) {
+    typingEl.remove(); addMsg('Error: ' + e.message, 'ai');
+  }
+  isLoading = false;
+  document.getElementById('input').disabled = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+// ─── MESSAGES ─────────────────────────────────────────────────
+function addMsg(text, who, scroll=true) {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div'); d.className = 'msg ' + who;
+  d.innerHTML = '<span class="msg-sender">' + (who==='ai'?'Tutor':'You') + '</span><div class="bubble">' + text.replace(/\n/g,'<br/>') + '</div>';
+  msgs.appendChild(d); if(scroll) msgs.scrollTop = msgs.scrollHeight; return d;
+}
+
+function addTyping() {
+  const msgs = document.getElementById('messages');
+  const d = document.createElement('div'); d.className = 'msg ai';
+  d.innerHTML = '<span class="msg-sender">Tutor</span><div class="typing"><span></span><span></span><span></span></div>';
+  msgs.appendChild(d); msgs.scrollTop = msgs.scrollHeight; return d;
+}
+
+// ─── HIGHLIGHT + ASK ──────────────────────────────────────────
+const pageArea = document.getElementById('page-area');
+const popup = document.getElementById('popup');
+
+document.getElementById('text-layer').addEventListener('mouseup', () => {
+  const sel = window.getSelection();
+  if (!sel || sel.toString().trim().length < 2) { popup.style.display='none'; return; }
+  const range = sel.getRangeAt(0).getBoundingClientRect();
+  popup.style.display = 'block';
+  popup.style.top = (range.bottom + 8) + 'px';
+  popup.style.left = Math.max(8, range.left) + 'px';
+
+  // saves text immediately on mouseup BEFORE anything clears it
+  savedSelection = sel.toString().trim();
+});
+
+popup.addEventListener('click', async () => {
+  const text = savedSelection.trim(); // ✅ already saved, never blank
+  if (!text) return; // Don't proceed if no text selected
+  popup.style.display = 'none'; window.getSelection().removeAllRanges();
+  addMsg('Explain: "' + text + '"', 'user');
+  await callAI('The student selected this text from page ' + (currentPage+1) + ' of "' + pdfName + '": "' + text + '". Explain it simply and clearly. Remember if they struggled with this concept before.');
+});
+
+document.addEventListener('mousedown', (e) => {
+  if (!popup.contains(e.target)) {
+    setTimeout(() => popup.style.display='none', 200);
+  }
+});
+
+// ─── THEME ────────────────────────────────────────────────────
+function toggleTheme() { document.body.classList.toggle('dark'); }
+
+// ─── INIT ─────────────────────────────────────────────────────
+window.onload = async () => {
+  const saved = localStorage.getItem('lt_api_key');
+  if (saved) {
+    API_KEY = saved;
+    document.getElementById('api-key-input').value = saved;
+    const isReturning = !!localStorage.getItem('lt_assistant_id') && !!localStorage.getItem('lt_thread_id');
+    document.getElementById('setup').style.display = 'none';
+    enableInput();
+    if (isReturning) {
+      // Return visit — ask AI to greet based on memory
+      const lastPdf = localStorage.getItem('lt_last_pdf') || '';
+      const lastPage = localStorage.getItem('lt_last_page') || '1';
+      const returnMsg = await sendToBackboard(
+        'The student just opened the app again. ' +
+        (lastPdf ? 'Last time they were reading "' + lastPdf + '" on page ' + lastPage + '. ' : '') +
+        'Check your memory and greet them. Mention: what they were studying, any weak areas you remember, and encourage them to continue. Keep it short and warm.'
+      );
+      addMsg(returnMsg, 'ai');
+    }
+  }
+};
+</script>
+</body>
+</html>
