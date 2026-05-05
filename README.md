@@ -62,8 +62,6 @@ This is not a generic chatbot. This is a tutor that **knows you**.
 | **Assistant** | Holds the personalised tutor system prompt and persona |
 | **Thread** | Manages the conversation session — reused across visits so context is never lost |
 
-> ℹ️ No RAG or vector database is used. The current page's text is injected directly into the prompt, keeping the app lightweight and fast.
-
 ---
 
 ## ⚙️ Getting Started
