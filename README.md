@@ -111,4 +111,4 @@ MIT — free to use, fork, and build upon.
 
 ---
 
-<p align="center">Built with ❤️ to make learning enjoying.</p>
+<p align="center">Built with ❤️ to make learning more enjoyable and engaging..</p>
